@@ -5,10 +5,10 @@ import time
 import grpc
 
 import unified_planning
-from unified_planning.engines.results import POSITIVE_OUTCOMES
+from unified_planning.engines.results import POSITIVE_OUTCOMES, PlanGenerationResult
 from unified_planning.shortcuts import Problem, OneshotPlanner
-import unified_planning.grpc.generated.unified_planning_pb2 as op_pb2
 import unified_planning.grpc.generated.unified_planning_pb2_grpc as op_pb2_grpc
+import unified_planning.grpc.generated.unified_planning_pb2 as proto
 from unified_planning.grpc.proto_reader import  ProtobufReader
 from unified_planning.grpc.proto_writer import  ProtobufWriter
 
@@ -34,7 +34,7 @@ class UnifiedPlanningServer(op_pb2_grpc.UnifiedPlanningServicer):
             self.logger.info("Got anytime planner, getting solutions")
             for p in planner.get_solutions(problem):
                 self.logger.info("Got anytime planner, getting solutions")
-                next_result = self.writer.convert(p)
+                next_result = _convert_plan_generation_result(p, self.writer)
                 self.logger.info("Sending a solution")
                 yield next_result
                 self.logger.info(f"Sent res: {next_result}")
@@ -49,7 +49,7 @@ class UnifiedPlanningServer(op_pb2_grpc.UnifiedPlanningServicer):
                 self.logger.info(f"{planner.name} found this plan: {result.plan}")
             else:
                 self.logger.info("No plan found.")
-            answer = self.writer.convert(result)
+            answer = _convert_plan_generation_result(result, self.writer)
         return answer
 
     def validatePlan(self, request, context):
@@ -83,3 +83,19 @@ class UnifiedPlanningServer(op_pb2_grpc.UnifiedPlanningServicer):
 
     def wait_for_termination(self):
         self.server.wait_for_termination()
+
+
+def _convert_plan_generation_result(result: PlanGenerationResult, writer: ProtobufWriter) -> proto.PlanGenerationResult:
+    # This method is needed because the protobuf converter is not able to handle invalid results, so when the plan is None it crashes.
+    log_messages = None
+    if result.log_messages is not None:
+        log_messages = [writer.convert(log) for log in result.log_messages]
+    plan = None if result.plan is None else writer.convert(result.plan)
+
+    return proto.PlanGenerationResult(
+        status=writer.convert(result.status),
+        plan=plan,
+        engine=proto.Engine(name=result.engine_name),
+        metrics=result.metrics,
+        log_messages=log_messages,
+    )

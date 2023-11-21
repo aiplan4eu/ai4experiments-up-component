@@ -2,7 +2,7 @@ FROM python:3.8
 
 WORKDIR /up-service
 
-COPY . /up-service
+COPY ./requirements.txt /up-service
 
 # Install OpenJDK-17
 RUN apt-get update && \
@@ -29,6 +29,8 @@ RUN pip3 install ./unified-planning[engines]
 
 RUN apt-get -y update
 RUN apt-get -y install git wget
+
+COPY . /up-service
 
 RUN jupyter trust ./unified-planning/docs/notebooks/*.ipynb
 

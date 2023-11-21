@@ -42,8 +42,9 @@ class UnifiedPlanningServer(op_pb2_grpc.UnifiedPlanningServicer):
 
     def planOneShot(self, request, context):
         problem = self.reader.convert(request.problem)
+        optimality_guarantee = OptimalityGuarantee.SOLVED_OPTIMALLY if request.Mode.SOLVED_OPTIMALLY else OptimalityGuarantee.SATISFICING
         # TODO add resolution_mode and timeout
-        with OneshotPlanner(problem_kind=problem.kind) as planner:
+        with OneshotPlanner(problem_kind=problem.kind, optimality_guarantee=optimality_guarantee) as planner:
             result = planner.solve(problem)
             if result.status in unified_planning.engines.results.POSITIVE_OUTCOMES:
                 self.logger.info(f"{planner.name} found this plan: {result.plan}")

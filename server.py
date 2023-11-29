@@ -11,6 +11,7 @@ import unified_planning.grpc.generated.unified_planning_pb2_grpc as op_pb2_grpc
 import unified_planning.grpc.generated.unified_planning_pb2 as proto
 from unified_planning.grpc.proto_reader import  ProtobufReader
 from unified_planning.grpc.proto_writer import  ProtobufWriter
+from unified_planning.exceptions import UPNoSuitableEngineAvailableException
 
 from unified_planning.shortcuts import *
 
@@ -42,7 +43,7 @@ class UnifiedPlanningServer(op_pb2_grpc.UnifiedPlanningServicer):
 
     def planOneShot(self, request, context):
         problem = self.reader.convert(request.problem)
-        optimality_guarantee = OptimalityGuarantee.SOLVED_OPTIMALLY if request.Mode.SOLVED_OPTIMALLY else OptimalityGuarantee.SATISFICING
+        optimality_guarantee = OptimalityGuarantee.SOLVED_OPTIMALLY if request.resolution_mode == request.Mode.SOLVED_OPTIMALLY else OptimalityGuarantee.SATISFICING
         # TODO add resolution_mode and timeout
         with OneshotPlanner(problem_kind=problem.kind, optimality_guarantee=optimality_guarantee) as planner:
             result = planner.solve(problem)
@@ -55,7 +56,7 @@ class UnifiedPlanningServer(op_pb2_grpc.UnifiedPlanningServicer):
 
     def validatePlan(self, request, context):
         problem = self.reader.convert(request.problem)
-        plan = self.reader.convert(request.plan)
+        plan = self.reader.convert(request.plan, problem)
         with PlanValidator(problem_kind=problem.kind, plan_kind=plan.kind) as validator:
             validation_result = validator.validate(problem, plan)
             answer = self.writer.convert(validation_result)

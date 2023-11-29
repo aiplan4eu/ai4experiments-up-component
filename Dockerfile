@@ -25,12 +25,12 @@ RUN pip3 install -r requirements.txt
 # RUN git clone -b v1.0.0 https://github.com/aiplan4eu/unified-planning.git
 # RUN pip3 install ./unified-planning[engines]
 
+COPY . /up-service
+
 RUN pip3 install ./unified-planning[engines]
 
 RUN apt-get -y update
 RUN apt-get -y install git wget
-
-COPY . /up-service
 
 RUN jupyter trust ./unified-planning/docs/notebooks/*.ipynb
 
